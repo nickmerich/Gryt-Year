@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   Brain,
   Apple,
@@ -33,8 +34,11 @@ export default function GrytLanding() {
   const [onboardingData, setOnboardingData] = useState({
     goal: "",
     motivation: "",
+    sacrifices: "",
     habits: "",
-    integrations: [] as string[],
+    contract: "",
+    signature: "",
+    signatureDate: "",
   })
 
   const onboardingSteps = [
@@ -53,11 +57,26 @@ export default function GrytLanding() {
       description: "Understanding your 'why' keeps you motivated",
     },
     {
+      question: "What daily habits will you sacrifice to achieve this goal?",
+      key: "sacrifices" as keyof typeof onboardingData,
+      placeholder:
+        "e.g., Stop scrolling social media for 2 hours daily, eliminate late-night snacking, quit hitting snooze...",
+      emoji: "🔥",
+      description: "Identify the habits you must eliminate to make room for growth",
+    },
+    {
       question: "Which daily habits will help you achieve your goal?",
       key: "habits" as keyof typeof onboardingData,
       placeholder: "e.g., Exercise 30 minutes, read 20 pages, meditate 10 minutes, track calories...",
       emoji: "✨",
       description: "Identify the key habits that drive your success",
+    },
+    {
+      question: "Sign your transformation contract",
+      key: "contract" as keyof typeof onboardingData,
+      placeholder: "",
+      emoji: "📝",
+      description: "Commit to your journey with a digital signature",
     },
   ]
 
@@ -291,15 +310,15 @@ export default function GrytLanding() {
             >
               Start Your Transformation
             </h2>
-            <p className="text-xl text-gray-600">Answer 3 simple questions to personalize your experience</p>
+            <p className="text-xl text-gray-600">Answer 5 key questions to commit to your transformation</p>
           </div>
 
           <Card className="rounded-3xl shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-6">
               <div className="flex items-center justify-between mb-6">
-                <Badge className="bg-green-500 text-white px-4 py-2 rounded-full">Step {currentStep + 1} of 3</Badge>
+                <Badge className="bg-green-500 text-white px-4 py-2 rounded-full">Step {currentStep + 1} of 5</Badge>
                 <div className="flex space-x-2">
-                  {[0, 1, 2].map((step) => (
+                  {[0, 1, 2, 3, 4].map((step) => (
                     <div
                       key={step}
                       className={`w-3 h-3 rounded-full transition-colors ${
@@ -319,47 +338,173 @@ export default function GrytLanding() {
             </CardHeader>
 
             <CardContent className="px-8 pb-8">
-              <div className="space-y-6">
-                <div>
-                  <Textarea
-                    placeholder={onboardingSteps[currentStep].placeholder}
-                    value={onboardingData[onboardingSteps[currentStep].key] as string}
-                    onChange={(e) =>
-                      setOnboardingData((prev) => ({
-                        ...prev,
-                        [onboardingSteps[currentStep].key]: e.target.value,
-                      }))
-                    }
-                    className="min-h-32 rounded-2xl border-2 border-gray-200 focus:border-green-500 text-lg"
-                  />
+              {currentStep < 4 ? (
+                <div className="space-y-6">
+                  <div>
+                    <Textarea
+                      placeholder={onboardingSteps[currentStep].placeholder}
+                      value={onboardingData[onboardingSteps[currentStep].key] as string}
+                      onChange={(e) =>
+                        setOnboardingData((prev) => ({
+                          ...prev,
+                          [onboardingSteps[currentStep].key]: e.target.value,
+                        }))
+                      }
+                      className="min-h-32 rounded-2xl border-2 border-gray-200 focus:border-green-500 text-lg"
+                    />
+                  </div>
+
+                  {currentStep === 2 && (
+                    <Card className="rounded-2xl bg-red-50 border-2 border-red-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="text-2xl">⚠️</div>
+                          <div>
+                            <h4 className="font-bold text-red-800 mb-2">The Power of Sacrifice</h4>
+                            <p className="text-sm text-red-700">
+                              "Love enough to pursue it. Sacrifice comforts for growth." - True transformation requires
+                              letting go of habits that no longer serve your highest self. Be honest about what must be
+                              eliminated.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="flex justify-between items-center pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                      disabled={currentStep === 0}
+                      className="rounded-2xl"
+                    >
+                      ← Previous
+                    </Button>
+
+                    <Button
+                      className="bg-green-500 hover:bg-green-600 text-white rounded-2xl px-8"
+                      onClick={() => {
+                        if (currentStep < 4) {
+                          setCurrentStep(currentStep + 1)
+                        } else {
+                          // Complete onboarding
+                          document.getElementById("integrations")?.scrollIntoView({ behavior: "smooth" })
+                        }
+                      }}
+                    >
+                      {currentStep === 4 ? "Complete Setup" : "Next"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                // Contract Signing Step
+                <div className="space-y-6">
+                  <Card className="rounded-3xl bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200">
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">
+                        🏛️ Gryt Year Transformation Contract
+                      </h3>
 
-                <div className="flex justify-between items-center pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                    disabled={currentStep === 0}
-                    className="rounded-2xl"
-                  >
-                    ← Previous
-                  </Button>
+                      <div className="space-y-4 text-sm text-gray-700">
+                        <div className="p-4 bg-white rounded-2xl">
+                          <h4 className="font-bold text-green-600 mb-2">My Commitment Goal:</h4>
+                          <p className="italic">"{onboardingData.goal || "Not specified"}"</p>
+                        </div>
 
-                  <Button
-                    className="bg-green-500 hover:bg-green-600 text-white rounded-2xl px-8"
-                    onClick={() => {
-                      if (currentStep < 2) {
-                        setCurrentStep(currentStep + 1)
-                      } else {
+                        <div className="p-4 bg-white rounded-2xl">
+                          <h4 className="font-bold text-blue-600 mb-2">My Why & Motivation:</h4>
+                          <p className="italic">"{onboardingData.motivation || "Not specified"}"</p>
+                        </div>
+
+                        <div className="p-4 bg-white rounded-2xl">
+                          <h4 className="font-bold text-red-600 mb-2">Habits I Will Sacrifice:</h4>
+                          <p className="italic">"{onboardingData.sacrifices || "Not specified"}"</p>
+                        </div>
+
+                        <div className="p-4 bg-white rounded-2xl">
+                          <h4 className="font-bold text-purple-600 mb-2">Daily Habits I Will Build:</h4>
+                          <p className="italic">"{onboardingData.habits || "Not specified"}"</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 p-4 bg-yellow-50 rounded-2xl border-2 border-yellow-200">
+                        <h4 className="font-bold text-yellow-800 mb-2">📋 Sacred Commitment:</h4>
+                        <p className="text-sm text-yellow-700 leading-relaxed">
+                          I commit to this 365-day journey of transformation. I understand that growth requires both the
+                          discipline to build new habits and the courage to sacrifice old ones. I will love enough to
+                          pursue my goals, believe deeply in God's purpose for my life, and maintain unwavering
+                          self-belief as I transform my mind, body, and spirit.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Digital Signature Section */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Digital Signature *</label>
+                      <Input
+                        placeholder="Type your full name as your digital signature"
+                        value={onboardingData.signature}
+                        onChange={(e) =>
+                          setOnboardingData((prev) => ({
+                            ...prev,
+                            signature: e.target.value,
+                            signatureDate: new Date().toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }),
+                          }))
+                        }
+                        className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 text-lg font-cursive"
+                        style={{ fontFamily: "cursive" }}
+                      />
+                    </div>
+
+                    {onboardingData.signature && (
+                      <div className="text-center p-4 bg-green-50 rounded-2xl border-2 border-green-200">
+                        <div className="text-lg font-cursive text-green-800" style={{ fontFamily: "cursive" }}>
+                          {onboardingData.signature}
+                        </div>
+                        <div className="text-sm text-green-600 mt-1">Signed on {onboardingData.signatureDate}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                      className="rounded-2xl"
+                    >
+                      ← Previous
+                    </Button>
+
+                    <Button
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-2xl px-8 disabled:opacity-50"
+                      disabled={!onboardingData.signature}
+                      onClick={() => {
+                        // Save contract to localStorage (in production, this would save to database)
+                        const contractData = {
+                          ...onboardingData,
+                          contractSigned: true,
+                          contractDate: new Date().toISOString(),
+                        }
+                        localStorage.setItem("gryt-transformation-contract", JSON.stringify(contractData))
+
                         // Complete onboarding
                         document.getElementById("integrations")?.scrollIntoView({ behavior: "smooth" })
-                      }
-                    }}
-                  >
-                    {currentStep === 2 ? "Complete Setup" : "Next"}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                      }}
+                    >
+                      {onboardingData.signature ? "🏛️ Complete Sacred Contract" : "📝 Sign to Continue"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

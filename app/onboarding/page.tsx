@@ -7,14 +7,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowRight, ArrowLeft, CheckCircle } from "lucide-react"
+import ContractSigningStep from "./components/contract-signing-step"
 
 export default function Onboarding() {
   const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState({
     goal: "",
     motivation: "",
+    sacrifices: "",
     habits: "",
     integrations: [] as string[],
+    signature: "",
+    signatureDate: "",
   })
 
   const steps = [
@@ -33,6 +37,13 @@ export default function Onboarding() {
       emoji: "💪",
     },
     {
+      title: "What daily habits will you sacrifice to achieve this goal?",
+      description: "Identify what you're willing to give up for growth",
+      key: "sacrifices" as keyof typeof formData,
+      placeholder: "e.g., Social media scrolling, late-night snacking, hitting snooze, excessive TV...",
+      emoji: "🔥",
+    },
+    {
       title: "Which daily habits will help you achieve your goal?",
       description: "Identify the key habits that drive your success",
       key: "habits" as keyof typeof formData,
@@ -45,6 +56,12 @@ export default function Onboarding() {
       key: "integrations" as keyof typeof formData,
       emoji: "🔗",
     },
+    {
+      title: "Sign Your Transformation Contract",
+      description: "Make a sacred commitment to your journey",
+      key: "contract" as keyof typeof formData,
+      emoji: "📝",
+    },
   ]
 
   const integrationOptions = [
@@ -56,12 +73,39 @@ export default function Onboarding() {
     { id: "goodreads", name: "Goodreads", category: "Reading", icon: "📖" },
   ]
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     } else {
-      // Complete onboarding
-      window.location.href = "/dashboard"
+      // Generate contract PDF and store in blob storage
+      if (currentStep === 5) {
+        try {
+          // In a real implementation, we would generate a PDF here
+          // For now, we'll just store the contract data as JSON
+          const contractData = {
+            ...formData,
+            signatureDate: new Date().toISOString(),
+          }
+
+          // Store contract in localStorage for demo purposes
+          localStorage.setItem("gryt-contract", JSON.stringify(contractData))
+
+          // In production, we would store in Vercel Blob
+          // const contractBlob = await fetch('/api/store-contract', {
+          //   method: 'POST',
+          //   headers: { 'Content-Type': 'application/json' },
+          //   body: JSON.stringify(contractData)
+          // })
+
+          // Complete onboarding and redirect
+          window.location.href = "/dashboard"
+        } catch (error) {
+          console.error("Error storing contract:", error)
+        }
+      } else {
+        // Complete onboarding
+        window.location.href = "/dashboard"
+      }
     }
   }
 
@@ -120,6 +164,14 @@ export default function Onboarding() {
           <CardContent className="px-8 pb-8">
             {currentStep < 3 ? (
               <div className="space-y-6">
+                {currentStep === 2 && (
+                  <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-4">
+                    <p className="text-amber-800 font-medium">
+                      "Love enough to pursue it. Sacrifice comforts for growth. Discipline your desires."
+                    </p>
+                    <p className="text-amber-700 text-sm mt-1">— Gryt Year Philosophy</p>
+                  </div>
+                )}
                 <Textarea
                   placeholder={currentStepData.placeholder}
                   value={formData[currentStepData.key] as string}
@@ -132,7 +184,21 @@ export default function Onboarding() {
                   className="min-h-32 rounded-2xl border-2 border-gray-200 focus:border-green-500 text-lg"
                 />
               </div>
-            ) : (
+            ) : currentStep === 3 ? (
+              <div className="space-y-6">
+                <Textarea
+                  placeholder={currentStepData.placeholder}
+                  value={formData[currentStepData.key] as string}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      [currentStepData.key]: e.target.value,
+                    }))
+                  }
+                  className="min-h-32 rounded-2xl border-2 border-gray-200 focus:border-green-500 text-lg"
+                />
+              </div>
+            ) : currentStep === 4 ? (
               <div className="space-y-4">
                 <p className="text-gray-600 mb-6">
                   Select the apps you'd like to connect for automatic habit tracking:
@@ -163,6 +229,8 @@ export default function Onboarding() {
                   ))}
                 </div>
               </div>
+            ) : (
+              <ContractSigningStep formData={formData} setFormData={setFormData} />
             )}
 
             {/* Navigation */}
@@ -183,7 +251,11 @@ export default function Onboarding() {
                 ))}
               </div>
 
-              <Button onClick={handleNext} className="bg-green-500 hover:bg-green-600 text-white rounded-2xl px-8">
+              <Button
+                onClick={handleNext}
+                className="bg-green-500 hover:bg-green-600 text-white rounded-2xl px-8"
+                disabled={currentStep === 5 && !formData.signature}
+              >
                 {currentStep === steps.length - 1 ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
