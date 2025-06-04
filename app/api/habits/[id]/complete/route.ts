@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const habitId = sanitizeUUID(params.id)
     if (!habitId) {
-      return NextResponse.json({ error: "Invalid habit ID" }, { status: 400 })
+      return NextResponse.json({ error: "Invalid habit ID format" }, { status: 400 })
     }
 
     const { value, notes } = await request.json()
@@ -85,8 +85,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       .from("habits")
       .update({
         streak: newStreak,
-        longest_streak:
-          newStreak > 0 ? supabase.sql`GREATEST(longest_streak, ${newStreak})` : supabase.sql`longest_streak`,
+        longest_streak: Math.max(newStreak, 0), // Use Math.max instead of SQL function
       })
       .eq("id", habitId)
       .select()
@@ -98,11 +97,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     // Update user XP
-    const xpReward = habit.xp_reward || 10
     const { error: xpError } = await supabase.from("user_xp").upsert({
       user_id: userId,
-      total_xp: supabase.sql`COALESCE(total_xp, 0) + ${xpReward}`,
-      updated_at: new Date().toISOString(),
+      total_xp: supabase.sql`COALESCE(total_xp, 0) + ${habit.xp_reward || 10}`,
     })
 
     if (xpError) {

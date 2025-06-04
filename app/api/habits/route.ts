@@ -32,12 +32,13 @@ export async function GET(request: Request) {
     }
 
     // Transform data to match our Habit type
-    const today = new Date().toISOString().split("T")[0]
     const transformedHabits = habits.map((habit) => ({
       ...habit,
       completionHistory: habit.habit_completions || [],
       todayComplete:
-        habit.habit_completions?.some((completion: any) => completion.date === today && completion.completed) || false,
+        habit.habit_completions?.some(
+          (completion: any) => completion.date === new Date().toISOString().split("T")[0] && completion.completed,
+        ) || false,
     }))
 
     return NextResponse.json(transformedHabits)
@@ -59,33 +60,19 @@ export async function POST(request: Request) {
 
     const habitData = await request.json()
 
-    // Validate and sanitize input
-    const requiredFields = ["title", "category"]
-    for (const field of requiredFields) {
-      if (!habitData[field]) {
-        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 })
-      }
-    }
-
-    const allowedCategories = ["physical", "mental", "spiritual", "professional", "family", "nutrition"]
-    if (!allowedCategories.includes(habitData.category)) {
-      return NextResponse.json({ error: "Invalid category" }, { status: 400 })
-    }
-
     const { data: newHabit, error } = await supabase
       .from("habits")
       .insert({
         user_id: userId,
         title: habitData.title,
-        description: habitData.description || null,
+        description: habitData.description,
         category: habitData.category,
         frequency: habitData.frequency || "daily",
         target_value: habitData.target_value || 1,
-        unit: habitData.unit || null,
+        unit: habitData.unit,
         xp_reward: habitData.xp_reward || 10,
-        integration: habitData.integration || null,
-        streak: 0,
-        longest_streak: 0,
+        integration: habitData.integration,
+        reminder_time: habitData.reminder_time,
       })
       .select()
       .single()

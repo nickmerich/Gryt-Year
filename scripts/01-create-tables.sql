@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS habits (
   longest_streak INTEGER DEFAULT 0,
   xp_reward INTEGER DEFAULT 10,
   integration JSONB,
+  reminder_time TIME,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS habit_completions (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   completed BOOLEAN DEFAULT false,
-  value NUMERIC,
+  value DECIMAL(10,2),
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(habit_id, date)
@@ -51,11 +52,13 @@ CREATE TABLE IF NOT EXISTS goals (
   title VARCHAR(255) NOT NULL,
   description TEXT,
   category VARCHAR(50) NOT NULL,
-  target_value NUMERIC NOT NULL,
-  current_value NUMERIC DEFAULT 0,
+  target_value DECIMAL(10,2) NOT NULL,
+  current_value DECIMAL(10,2) DEFAULT 0,
   unit VARCHAR(50),
   target_date DATE,
   status VARCHAR(20) DEFAULT 'active',
+  priority VARCHAR(10) DEFAULT 'medium',
+  xp_reward INTEGER DEFAULT 50,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -103,11 +106,15 @@ CREATE TABLE IF NOT EXISTS contracts (
 CREATE TABLE IF NOT EXISTS insights (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
+  type VARCHAR(20) NOT NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
-  confidence NUMERIC(3,2) DEFAULT 0.5,
+  confidence DECIMAL(3,2) DEFAULT 0.5,
   status VARCHAR(20) DEFAULT 'new',
+  category VARCHAR(50),
+  related_habits UUID[],
+  related_goals UUID[],
+  expires_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -117,8 +124,9 @@ CREATE TABLE IF NOT EXISTS integrations (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type VARCHAR(50) NOT NULL,
   status VARCHAR(20) DEFAULT 'disconnected',
-  last_synced TIMESTAMP WITH TIME ZONE,
   auth_data JSONB,
+  last_synced TIMESTAMP WITH TIME ZONE,
+  error_message TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, type)
@@ -152,23 +160,36 @@ CREATE TABLE IF NOT EXISTS reflections (
 CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
 CREATE INDEX IF NOT EXISTS idx_habit_completions_user_id ON habit_completions(user_id);
 CREATE INDEX IF NOT EXISTS idx_habit_completions_date ON habit_completions(date);
+CREATE INDEX IF NOT EXISTS idx_habit_completions_habit_date ON habit_completions(habit_id, date);
 CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);
 CREATE INDEX IF NOT EXISTS idx_sacrifices_user_id ON sacrifices(user_id);
 CREATE INDEX IF NOT EXISTS idx_insights_user_id ON insights(user_id);
 CREATE INDEX IF NOT EXISTS idx_integrations_user_id ON integrations(user_id);
+CREATE INDEX IF NOT EXISTS idx_reflections_user_id ON reflections(user_id);
 
 -- Create triggers for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_habits_updated_at BEFORE UPDATE ON habits FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_goals_updated_at BEFORE UPDATE ON goals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_sacrifices_updated_at BEFORE UPDATE ON sacrifices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_integrations_updated_at BEFORE UPDATE ON integrations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_user_xp_updated_at BEFORE UPDATE ON user_xp FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_habits_updated_at BEFORE UPDATE ON habits
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_goals_updated_at BEFORE UPDATE ON goals
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_sacrifices_updated_at BEFORE UPDATE ON sacrifices
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_integrations_updated_at BEFORE UPDATE ON integrations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_xp_updated_at BEFORE UPDATE ON user_xp
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

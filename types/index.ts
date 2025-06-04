@@ -1,6 +1,6 @@
 // User types
 export interface User {
-  id: string // UUID
+  id: string
   email: string
   name: string
   bio?: string
@@ -31,8 +31,8 @@ export interface UserSettings {
 
 // Habit types
 export interface Habit {
-  id: string // UUID
-  user_id: string // UUID
+  id: string
+  user_id: string
   title: string
   description?: string
   category: PillarType
@@ -51,9 +51,9 @@ export interface Habit {
 }
 
 export interface HabitCompletion {
-  id?: string // UUID
-  habit_id: string // UUID
-  user_id: string // UUID
+  id?: string
+  habit_id: string
+  user_id: string
   date: string
   completed: boolean
   value?: number
@@ -63,8 +63,8 @@ export interface HabitCompletion {
 
 // Goal types
 export interface Goal {
-  id: string // UUID
-  user_id: string // UUID
+  id: string
+  user_id: string
   title: string
   description?: string
   category: PillarType
@@ -79,8 +79,8 @@ export interface Goal {
 
 // Sacrifice types
 export interface Sacrifice {
-  id: string // UUID
-  user_id: string // UUID
+  id: string
+  user_id: string
   title: string
   description?: string
   category: string
@@ -92,9 +92,9 @@ export interface Sacrifice {
 }
 
 export interface SacrificeAvoidance {
-  id?: string // UUID
-  sacrifice_id: string // UUID
-  user_id: string // UUID
+  id?: string
+  sacrifice_id: string
+  user_id: string
   date: string
   avoided: boolean
   notes?: string
@@ -103,8 +103,8 @@ export interface SacrificeAvoidance {
 
 // Contract types
 export interface Contract {
-  id: string // UUID
-  user_id: string // UUID
+  id: string
+  user_id: string
   goal: string
   motivation: string
   sacrifices: string
@@ -117,8 +117,8 @@ export interface Contract {
 
 // Insight types
 export interface Insight {
-  id: string // UUID
-  user_id: string // UUID
+  id: string
+  user_id: string
   type: "strength" | "opportunity" | "pattern" | "recommendation"
   title: string
   description: string
@@ -129,8 +129,8 @@ export interface Insight {
 
 // Integration types
 export interface IntegrationSource {
-  id?: string // UUID
-  user_id?: string // UUID
+  id?: string
+  user_id?: string
   type: IntegrationType
   status: "connected" | "disconnected" | "error"
   last_synced?: string
@@ -160,7 +160,7 @@ export const PILLAR_COLORS = {
 
 // User XP types
 export interface UserXP {
-  user_id: string // UUID
+  user_id: string
   total_xp: number
   level: number
   updated_at: string
