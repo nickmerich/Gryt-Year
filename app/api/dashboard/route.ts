@@ -1,98 +1,104 @@
 import { NextResponse } from "next/server"
-import { kv } from "@vercel/kv"
-import type { Habit, Goal, Sacrifice, Insight, User } from "@/types"
+import { createServerSupabaseClient } from "@/lib/supabase"
 
-// Get dashboard data for current user
+// Get dashboard data
 export async function GET(request: Request) {
   try {
-    const userId = "user_123" // Placeholder
-
-    // Fetch all user data in parallel
-    const [user, habits, goals, sacrifices, insights, xp] = await Promise.all([
-      kv.get<User>(`user:${userId}`),
-      kv.lrange<Habit>(`user:${userId}:habits`, 0, -1),
-      kv.lrange<Goal>(`user:${userId}:goals`, 0, -1),
-      kv.lrange<Sacrifice>(`user:${userId}:sacrifices`, 0, -1),
-      kv.lrange<Insight>(`user:${userId}:insights`, 0, -1),
-      kv.get<number>(`user:${userId}:xp`) || 0,
-    ])
-
-    // Calculate metrics
+    const supabase = createServerSupabaseClient()
+    const userId = "user_123" // In a real app, get from session
     const today = new Date().toISOString().split("T")[0]
 
-    const completedToday = habits.filter((habit) =>
-      habit.completionHistory.some((c) => c.date.startsWith(today) && c.completed),
-    ).length
+    // Get habits with today's completions
+    const { data: habits, error: habitsError } = await supabase
+      .from("habits")
+      .select(`
+        *,
+        habit_completions(date, completed, value, notes)
+      `)
+      .eq("user_id", userId)
 
-    const totalHabits = habits.length
-
-    // Calculate current streak
-    let currentStreak = 0
-    const now = new Date()
-
-    for (let i = 0; i < 100; i++) {
-      // Check up to 100 days back
-      const checkDate = new Date(now)
-      checkDate.setDate(now.getDate() - i)
-      const dateStr = checkDate.toISOString().split("T")[0]
-
-      const allHabitsCompleted = habits.every((habit) =>
-        habit.completionHistory.some((c) => c.date.startsWith(dateStr) && c.completed),
-      )
-
-      if (allHabitsCompleted) {
-        currentStreak++
-      } else if (i > 0) {
-        // Don't break on today
-        break
-      }
+    if (habitsError) {
+      console.error("Supabase habits error:", habitsError)
+      return NextResponse.json({ error: "Failed to fetch habits" }, { status: 500 })
     }
 
-    // Calculate weekly average
-    const oneWeekAgo = new Date()
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    // Get goals
+    const { data: goals, error: goalsError } = await supabase
+      .from("goals")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "active")
 
-    let totalCompletions = 0
-    let totalPossible = 0
-
-    for (let i = 0; i < 7; i++) {
-      const checkDate = new Date(now)
-      checkDate.setDate(now.getDate() - i)
-      const dateStr = checkDate.toISOString().split("T")[0]
-
-      habits.forEach((habit) => {
-        totalPossible++
-        if (habit.completionHistory.some((c) => c.date.startsWith(dateStr) && c.completed)) {
-          totalCompletions++
-        }
-      })
+    if (goalsError) {
+      console.error("Supabase goals error:", goalsError)
+      return NextResponse.json({ error: "Failed to fetch goals" }, { status: 500 })
     }
 
-    const weeklyAverage = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0
+    // Get sacrifices
+    const { data: sacrifices, error: sacrificesError } = await supabase
+      .from("sacrifices")
+      .select("*")
+      .eq("user_id", userId)
 
-    // Get active goals
-    const activeGoals = goals.filter((goal) => goal.status === "active")
+    if (sacrificesError) {
+      console.error("Supabase sacrifices error:", sacrificesError)
+      return NextResponse.json({ error: "Failed to fetch sacrifices" }, { status: 500 })
+    }
 
     // Get recent insights
-    const recentInsights = insights
-      .filter((insight) => insight.status === "new")
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3)
+    const { data: insights, error: insightsError } = await supabase
+      .from("insights")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(3)
 
-    return NextResponse.json({
-      user,
+    if (insightsError) {
+      console.error("Supabase insights error:", insightsError)
+      return NextResponse.json({ error: "Failed to fetch insights" }, { status: 500 })
+    }
+
+    // Get user XP
+    const { data: userXp, error: xpError } = await supabase.from("user_xp").select("*").eq("user_id", userId).single()
+
+    if (xpError && xpError.code !== "PGRST116") {
+      // PGRST116 is "not found"
+      console.error("Supabase XP error:", xpError)
+    }
+
+    // Transform habits data
+    const activeHabits = habits.map((habit) => ({
+      ...habit,
+      completionHistory: habit.habit_completions || [],
+      todayComplete:
+        habit.habit_completions?.some((completion: any) => completion.date === today && completion.completed) || false,
+    }))
+
+    // Calculate stats
+    const completedToday = activeHabits.filter((h) => h.todayComplete).length
+    const totalHabits = activeHabits.length
+
+    // Calculate current streak (simplified)
+    const currentStreak = Math.max(...activeHabits.map((h) => h.streak || 0), 0)
+
+    // Calculate weekly average
+    const weeklyAverage = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0
+
+    const dashboardData = {
       stats: {
         completedToday,
         totalHabits,
         currentStreak,
         weeklyAverage,
-        totalXp: xp,
+        totalXp: userXp?.total_xp || 0,
       },
-      activeHabits: habits.slice(0, 4), // Just return a few for the dashboard
-      activeGoals: activeGoals.slice(0, 3),
-      activeSacrifices: sacrifices.slice(0, 3),
-      recentInsights,
-    })
+      activeHabits,
+      activeGoals: goals || [],
+      activeSacrifices: sacrifices || [],
+      recentInsights: insights || [],
+    }
+
+    return NextResponse.json(dashboardData)
   } catch (error) {
     console.error("Error fetching dashboard data:", error)
     return NextResponse.json({ error: "Failed to fetch dashboard data" }, { status: 500 })

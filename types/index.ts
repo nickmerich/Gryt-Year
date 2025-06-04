@@ -1,180 +1,167 @@
-// Core User Types
+// User types
 export interface User {
-  id: string
+  id: string // UUID
   email: string
   name: string
-  createdAt: string
-  profileImageUrl?: string
+  bio?: string
+  profile_image_url?: string
   settings: UserSettings
+  created_at: string
+  updated_at: string
 }
 
 export interface UserSettings {
-  notifications: NotificationSettings
-  privacy: PrivacySettings
+  notifications: {
+    email: boolean
+    push: boolean
+    dailyReminder: boolean
+    weeklyReflection: boolean
+    achievements: boolean
+    streakAlerts: boolean
+  }
+  privacy: {
+    shareProgress: boolean
+    shareAchievements: boolean
+    publicProfile: boolean
+    dataCollection: boolean
+  }
   theme: "light" | "dark" | "system"
   timeZone: string
 }
 
-export interface NotificationSettings {
-  email: boolean
-  push: boolean
-  dailyReminder: boolean
-  weeklyReflection: boolean
-  achievements: boolean
-  streakAlerts: boolean
-}
-
-export interface PrivacySettings {
-  shareProgress: boolean
-  shareAchievements: boolean
-  publicProfile: boolean
-  dataCollection: boolean
-}
-
-// Goal and Habit Types
-export interface Goal {
-  id: string
-  userId: string
-  title: string
-  description: string
-  category: PillarType
-  targetValue: number
-  currentValue: number
-  unit: string
-  startDate: string
-  targetDate: string
-  status: "active" | "completed" | "paused"
-  priority: "high" | "medium" | "low"
-  xpReward: number
-  habits: string[] // References to habit IDs
-  sacrifices: string[] // References to sacrifice IDs
-}
-
+// Habit types
 export interface Habit {
-  id: string
-  userId: string
+  id: string // UUID
+  user_id: string // UUID
   title: string
-  description: string
+  description?: string
   category: PillarType
-  frequency: "daily" | "weekly" | "custom"
-  customFrequency?: string
-  timeOfDay?: string
+  frequency: "daily" | "weekly" | "monthly"
+  target_value: number
+  unit?: string
   streak: number
-  longestStreak: number
-  completionHistory: HabitCompletion[]
-  integration?: IntegrationSource
-  xpReward: number
-  reminderTime?: string
+  longest_streak: number
+  xp_reward: number
+  integration?: IntegrationConfig
+  created_at: string
+  updated_at: string
+  // Computed fields
+  completionHistory?: HabitCompletion[]
+  todayComplete?: boolean
 }
 
 export interface HabitCompletion {
+  id?: string // UUID
+  habit_id: string // UUID
+  user_id: string // UUID
   date: string
   completed: boolean
   value?: number
   notes?: string
+  created_at?: string
 }
 
-export interface Sacrifice {
-  id: string
-  userId: string
+// Goal types
+export interface Goal {
+  id: string // UUID
+  user_id: string // UUID
   title: string
-  description: string
+  description?: string
   category: PillarType
-  avoidanceStreak: number
-  longestAvoidanceStreak: number
-  avoidanceHistory: SacrificeAvoidance[]
+  target_value: number
+  current_value: number
+  unit?: string
+  target_date?: string
+  status: "active" | "completed" | "paused" | "cancelled"
+  created_at: string
+  updated_at: string
+}
+
+// Sacrifice types
+export interface Sacrifice {
+  id: string // UUID
+  user_id: string // UUID
+  title: string
+  description?: string
+  category: string
+  avoidance_streak: number
+  longest_avoidance_streak: number
+  created_at: string
+  updated_at: string
+  avoidanceHistory?: SacrificeAvoidance[]
 }
 
 export interface SacrificeAvoidance {
+  id?: string // UUID
+  sacrifice_id: string // UUID
+  user_id: string // UUID
   date: string
   avoided: boolean
   notes?: string
+  created_at?: string
 }
 
-// Contract Types
+// Contract types
 export interface Contract {
-  id: string
-  userId: string
-  createdAt: string
-  goals: string[]
-  habits: string[]
-  sacrifices: string[]
+  id: string // UUID
+  user_id: string // UUID
+  goal: string
   motivation: string
+  sacrifices: string
+  habits: string
   signature: string
-  signatureDate: string
-  blobUrl?: string // URL to stored contract in Vercel Blob
+  signature_date: string
+  blob_url?: string
+  created_at: string
 }
 
-// Integration Types
-export interface IntegrationSource {
-  type: "apple-health" | "myfitnesspal" | "kindle" | "rescuetime" | "strava" | "goodreads" | "manual"
-  lastSynced?: string
-  status: "connected" | "disconnected" | "error"
-  errorMessage?: string
-}
-
-export interface IntegrationData {
-  sourceId: string
-  userId: string
-  dataType: string
-  value: any
-  timestamp: string
-  metadata?: Record<string, any>
-}
-
-// Analytics and Insights Types
+// Insight types
 export interface Insight {
-  id: string
-  userId: string
+  id: string // UUID
+  user_id: string // UUID
   type: "strength" | "opportunity" | "pattern" | "recommendation"
   title: string
   description: string
-  category?: PillarType
-  relatedHabits?: string[]
-  relatedGoals?: string[]
-  createdAt: string
-  expiresAt?: string
-  priority: "high" | "medium" | "low"
-  status: "new" | "viewed" | "implemented" | "dismissed"
+  confidence: number
+  status: "new" | "read" | "dismissed"
+  created_at: string
 }
 
-export interface Reflection {
-  id: string
-  userId: string
-  weekNumber: number
-  year: number
-  completedAt: string
-  overallPerformance: string
-  challenges: string
-  wins: string
-  adjustments: string
-  nextWeekGoals: string
-  metrics: ReflectionMetrics
+// Integration types
+export interface IntegrationSource {
+  id?: string // UUID
+  user_id?: string // UUID
+  type: IntegrationType
+  status: "connected" | "disconnected" | "error"
+  last_synced?: string
+  auth_data?: any
+  created_at?: string
+  updated_at?: string
 }
 
-export interface ReflectionMetrics {
-  overallProgress: number
-  habitsCompleted: number
-  totalHabits: number
-  streakDays: number
-  xpEarned: number
-  habitPerformance: {
-    habitId: string
-    completionRate: number
-    trend: "up" | "down" | "stable"
-    trendValue: number
-  }[]
+export interface IntegrationConfig {
+  type: IntegrationType
+  dataType: string
 }
 
-// Enums and Constants
-export type PillarType = "spiritual" | "physical" | "mental" | "professional" | "family" | "nutrition" | "special"
+export type IntegrationType = "apple-health" | "myfitnesspal" | "strava" | "kindle" | "rescuetime" | "goodreads"
 
-export const PILLAR_COLORS: Record<PillarType, { bg: string; text: string; light: string }> = {
-  spiritual: { bg: "bg-yellow-500", text: "text-yellow-600", light: "bg-yellow-100" },
-  physical: { bg: "bg-blue-500", text: "text-blue-600", light: "bg-blue-100" },
-  mental: { bg: "bg-purple-500", text: "text-purple-600", light: "bg-purple-100" },
-  professional: { bg: "bg-green-500", text: "text-green-600", light: "bg-green-100" },
-  family: { bg: "bg-pink-500", text: "text-pink-600", light: "bg-pink-100" },
-  nutrition: { bg: "bg-orange-500", text: "text-orange-600", light: "bg-orange-100" },
-  special: { bg: "bg-red-500", text: "text-red-600", light: "bg-red-100" },
+// Pillar types
+export type PillarType = "physical" | "mental" | "spiritual" | "professional" | "family" | "nutrition"
+
+export const PILLAR_COLORS = {
+  physical: { bg: "bg-red-500", text: "text-red-600", light: "bg-red-50" },
+  mental: { bg: "bg-blue-500", text: "text-blue-600", light: "bg-blue-50" },
+  spiritual: { bg: "bg-purple-500", text: "text-purple-600", light: "bg-purple-50" },
+  professional: { bg: "bg-green-500", text: "text-green-600", light: "bg-green-50" },
+  family: { bg: "bg-orange-500", text: "text-orange-600", light: "bg-orange-50" },
+  nutrition: { bg: "bg-yellow-500", text: "text-yellow-600", light: "bg-yellow-50" },
+} as const
+
+// User XP types
+export interface UserXP {
+  user_id: string // UUID
+  total_xp: number
+  level: number
+  updated_at: string
 }

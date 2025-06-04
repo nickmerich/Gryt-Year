@@ -22,7 +22,7 @@ interface ContractSigningStepProps {
   setFormData: React.Dispatch<React.SetStateAction<any>>
 }
 
-export function ContractSigningStep({ formData, setFormData }: ContractSigningStepProps) {
+export default function ContractSigningStep({ formData, setFormData }: ContractSigningStepProps) {
   const [date, setDate] = useState(formatDate(new Date()))
   const signatureRef = useRef<HTMLInputElement>(null)
 

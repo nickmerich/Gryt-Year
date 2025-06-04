@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server"
 import { put } from "@vercel/blob"
-import { kv } from "@vercel/kv"
-import type { User } from "@/types"
+import { createServerSupabaseClient } from "@/lib/supabase"
+import { getCurrentUserId } from "@/lib/auth"
 
 // Get current user profile
 export async function GET(request: Request) {
   try {
-    // In a real app, get the user ID from the session
-    const userId = "user_123" // Placeholder
+    const supabase = createServerSupabaseClient()
+    const userId = await getCurrentUserId()
 
-    // Fetch user from KV store
-    const user = await kv.get<User>(`user:${userId}`)
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
 
-    if (!user) {
+    const { data: user, error } = await supabase.from("users").select("*").eq("id", userId).single()
+
+    if (error) {
+      console.error("Supabase error:", error)
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
@@ -26,28 +30,39 @@ export async function GET(request: Request) {
 // Update user profile
 export async function PUT(request: Request) {
   try {
-    const userId = "user_123" // Placeholder
+    const supabase = createServerSupabaseClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+
     const updates = await request.json()
 
-    // Get existing user
-    const existingUser = await kv.get<User>(`user:${userId}`)
+    // Validate and sanitize input
+    const allowedFields = ["name", "bio", "settings"]
+    const sanitizedUpdates: any = {}
 
-    if (!existingUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        sanitizedUpdates[field] = updates[field]
+      }
     }
 
-    // Update user with new data
-    const updatedUser = {
-      ...existingUser,
-      ...updates,
-      // Don't allow overriding these fields
-      id: existingUser.id,
-      email: existingUser.email,
-      createdAt: existingUser.createdAt,
-    }
+    const { data: updatedUser, error } = await supabase
+      .from("users")
+      .update({
+        ...sanitizedUpdates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .select()
+      .single()
 
-    // Save updated user
-    await kv.set(`user:${userId}`, updatedUser)
+    if (error) {
+      console.error("Supabase error:", error)
+      return NextResponse.json({ error: "Failed to update user" }, { status: 500 })
+    }
 
     return NextResponse.json(updatedUser)
   } catch (error) {
@@ -59,7 +74,13 @@ export async function PUT(request: Request) {
 // Upload profile image
 export async function POST(request: Request) {
   try {
-    const userId = "user_123" // Placeholder
+    const supabase = createServerSupabaseClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const file = formData.get("file") as File
 
@@ -67,24 +88,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
+    // Validate file type and size
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Invalid file type" }, { status: 400 })
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB limit
+      return NextResponse.json({ error: "File too large" }, { status: 400 })
+    }
+
     // Upload to Vercel Blob
-    const blob = await put(`profile-images/${userId}/${file.name}`, file, {
+    const blob = await put(`profile-images/${userId}/${Date.now()}-${file.name}`, file, {
       access: "public",
     })
 
     // Update user profile with new image URL
-    const existingUser = await kv.get<User>(`user:${userId}`)
+    const { data: updatedUser, error } = await supabase
+      .from("users")
+      .update({ profile_image_url: blob.url })
+      .eq("id", userId)
+      .select()
+      .single()
 
-    if (!existingUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (error) {
+      console.error("Supabase error:", error)
+      return NextResponse.json({ error: "Failed to update profile image" }, { status: 500 })
     }
-
-    const updatedUser = {
-      ...existingUser,
-      profileImageUrl: blob.url,
-    }
-
-    await kv.set(`user:${userId}`, updatedUser)
 
     return NextResponse.json({ url: blob.url })
   } catch (error) {

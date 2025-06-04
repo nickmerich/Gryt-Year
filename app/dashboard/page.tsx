@@ -25,6 +25,7 @@ import { ReflectionReminder } from "@/components/reflection-reminder"
 import { Skeleton } from "@/components/ui/skeleton"
 import { type Habit, type Goal, type Sacrifice, type Insight, type PillarType, PILLAR_COLORS } from "@/types"
 import { toast } from "@/components/ui/use-toast"
+import { SupabaseConnectionTest } from "@/components/supabase-connection-test"
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
@@ -278,6 +279,11 @@ export default function Dashboard() {
         {/* Weekly Reflection Reminder */}
         <div className="mb-8">
           <ReflectionReminder weekNumber={12} daysUntilReflection={0} lastReflectionDate="Dec 20, 2024" />
+        </div>
+
+        {/* Supabase Connection Test - Remove in production */}
+        <div className="mb-8">
+          <SupabaseConnectionTest />
         </div>
 
         {/* Today's Habits */}
